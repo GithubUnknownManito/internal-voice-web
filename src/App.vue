@@ -66,6 +66,7 @@
 <script>
   import {
     register,
+    devastate,
     anonymousList,
     roomList,
     uploadImage
@@ -73,6 +74,9 @@
   import {
     ElMessage
   } from 'element-plus'
+  import {
+    ChatRoomSocket
+  } from '@/utils/webSocket.js'
   export default {
     name: 'App',
     data() {
@@ -93,6 +97,7 @@
       activeName() {
         this.getRoomUser()
         this.registerUser()
+        this.getRoomList()
       }
     },
     created() {
@@ -100,7 +105,12 @@
       if (!this.createUser()) {
         this.registerUser();
       }
+      window.onbeforeunload = () => {
+        setTimeout(() => {
+          this.devastate()
+        })
 
+      }
     },
     methods: {
       createUser() {
@@ -127,12 +137,24 @@
           this.dialogUserConfigVisible = false
           this.getRoomUser()
         })
+        var chatSocket = ChatRoomSocket({
+          room: this.activeName,
+          grid: this.userInfo.id
+        })
+        chatSocket.addEventListener("message-join", () => {
+          // eslint-disable-next-line no-debugger
+          debugger
+          this.getRoomUser()
+          this.getRoomList()
+        })
       },
       getRoomList() {
         roomList().then((res) => {
           console.log(res)
           this.roomList = res.data
-          this.activeName = this.roomList[0].id
+          if (!this.activeName) {
+            this.activeName = this.roomList[0].id
+          }
         })
       },
       getRoomUser() {
@@ -160,6 +182,14 @@
         }
         return true
       },
+      devastate() {
+        devastate(this.userInfo).then(res => {
+          console.log('devastate', res);
+        })
+      }
+    },
+    beforeUnmount() {
+      this.devastate()
     }
   }
 </script>
