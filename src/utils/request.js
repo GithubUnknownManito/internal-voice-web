@@ -1,7 +1,11 @@
 import axios from "axios";
 // 创建 axios 实例
+// eslint-disable-next-line no-debugger
+console.log(process.env.NODE_ENV)
+console.log(process.env.VUE_APP_BASE_URL)
+
 const requests = axios.create({
-  baseURL: "http://cloud.miaokeli.vip:8081", // 基础url,如果是多环境配置这样写，也可以像下面一行的写死。 // baseURL: 'http://168.192.0.123',
+  baseURL: process.env.VUE_APP_BASE_URL , // 基础url,如果是多环境配置这样写，也可以像下面一行的写死。 // baseURL: 'http://168.192.0.123',
   timeout: 6000, // 请求超时时间
 });
 

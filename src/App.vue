@@ -3,6 +3,12 @@
     <div class="grid-room-tree">
       <el-collapse v-model="activeName" accordion>
         <el-collapse-item v-for="room in roomList" :key="room.id" :title="room.name" :name="room.id" :disabled="!room.enable">
+          <template #title>
+            <el-badge v-if="room.enable" :value="room.onlineNumber" class="badge-item">
+              <span>{{room.name}}</span>
+            </el-badge>
+            <span v-else>{{room.name}}</span>
+          </template>
           <div class="user-itme" v-for="user in userList" :key="user.id">
             <el-avatar shape="square" :src="user.avatar" />
             <el-dropdown>
@@ -25,11 +31,12 @@
               </template>
             </el-dropdown>
           </div>
-
         </el-collapse-item>
       </el-collapse>
     </div>
-    <div class="grid-room-content"></div>
+    <div class="grid-room-content">
+      <div></div>
+    </div>
     <el-button circle class="config" @click="dialogUserConfigVisible = true">
       <el-icon>
         <Tools />
@@ -188,6 +195,11 @@
 
   .el-collapse-item:deep() .el-collapse-item__header {
     padding-left: 20px;
+  }
+
+  .badge-item:deep() .el-badge__content {
+    top: 15px;
+    right: 0px;
   }
 
   .user-itme {
