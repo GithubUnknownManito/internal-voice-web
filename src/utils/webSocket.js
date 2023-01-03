@@ -25,9 +25,9 @@ class ChatRoomSocketFunction extends EventTarget {
       };
       var message = null;
       if (status == 100) {
-        // eslint-disable-next-line no-debugger
-        debugger;
         message = new CustomEvent("message-join");
+      } else if (status == 150) {
+        message = new CustomEvent("message-left");
       } else if (status == 200) {
         setTimeout(() => {
           this.heartBeat();
@@ -85,7 +85,7 @@ class ChatRoomSocketFunction extends EventTarget {
       } else if (status == 1005) {
         ElMessage.error(content);
       }
-      this.dispatchEvent(message);
+      message && this.dispatchEvent(message);
     });
     this.webSocket.addEventListener("error", (event) => {
       console.error("error", event);
@@ -178,11 +178,20 @@ class ChatRoomSocketFunction extends EventTarget {
   }
 
   send(data) {
-    if (data instanceof String) {
-      this.webSocket.send(data);
-    } else {
-      this.webSocket.send(JSON.stringify(data));
+    if (!data) {
+      return;
     }
+    if (data instanceof String) {
+      data = JSON.parse(data);
+    }
+    var stamp = new Date().getTime();
+    this.webSocket.send(
+      JSON.stringify({
+        ...data,
+        stamp,
+      })
+    );
+    return stamp;
   }
 
   beforeunload() {
