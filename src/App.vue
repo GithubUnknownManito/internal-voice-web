@@ -53,7 +53,7 @@
                 </div>
                 <div class="message-body-bubble--msg">
                   <div class="message-body-bubble--content">
-                    <span class="bubble-text">{{msg.text}}</span>
+                    <span class="bubble-text" v-html="msg.text"></span>
                   </div>
                 </div>
               </li>
@@ -66,7 +66,7 @@
                     <span class="bubble-text">{{msg.userName}}</span>
                   </div>
                   <div class="message-body-bubble--content">
-                    <span class="bubble-text">{{msg.text}}</span>
+                    <span class="bubble-text" v-html="msg.text"></span>
                   </div>
                 </div>
               </li>
@@ -75,7 +75,7 @@
         </div>
         <div class="message-content">
           <div class="message-content--input">
-            <el-input type="textarea" v-model="message" resize="none"></el-input>
+            <el-input type="textarea" v-model="message" resize="none" v-on:keydown.enter="handleMessageKeyDown"></el-input>
           </div>
           <el-button class="message-content--button" type="primary" @click="handleSend">发送</el-button>
         </div>
@@ -203,8 +203,6 @@
           }, 1500)
         })
         chatSocket.addEventListener("message", (event) => {
-          // eslint-disable-next-line no-debugger
-          // debugger;
           var {
             from,
             model,
@@ -215,7 +213,7 @@
             this.currentRoom.msg.push({
               avatar: user.avatar,
               userName: user.name,
-              text: content,
+              text: content.replace(/</g, "&gt;").replace(/>/g, "&lt;").replace(/\n/g, "<br/>"),
               isMe: user.id == this.userInfo.id
             })
           }
@@ -226,7 +224,6 @@
             if (scrollHeight > offsetHeight) {
               this.$refs['message-body'].scrollTop = height
             }
-            console.log(this.$refs['message-body'].scrollHeight)
           })
         })
       },
@@ -268,6 +265,16 @@
           return false
         }
         return true
+      },
+      handleMessageKeyDown(e) {
+        if (e.ctrlKey && e.keyCode == 13) {
+          this.message += '\n';
+        } else {
+          this.handleSend()
+          if (e != undefined) {
+            e.preventDefault();
+          }
+        }
       },
       devastate() {
         devastate(this.userInfo).then(res => {
