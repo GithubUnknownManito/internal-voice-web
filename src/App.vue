@@ -44,8 +44,8 @@
         <span>{{currentRoom && currentRoom.name}}</span>
       </div>
       <div class="grid-room-content--message">
-        <div class="message-body">
-          <ul class="grid-room-content--message-body">
+        <div ref="message-body" class="message-body">
+          <ul ref="message-item" class="grid-room-content--message-body">
             <template v-for="(msg,index) in currentRoom.msg" :key="index">
               <li v-if="msg.isMe" class="message-body-bubble bubble-send">
                 <div class="message-body-bubble--avatar">
@@ -203,6 +203,8 @@
           }, 1500)
         })
         chatSocket.addEventListener("message", (event) => {
+          // eslint-disable-next-line no-debugger
+          // debugger;
           var {
             from,
             model,
@@ -217,6 +219,15 @@
               isMe: user.id == this.userInfo.id
             })
           }
+          this.$nextTick(() => {
+            var offsetHeight = this.$refs['message-body'].offsetHeight;
+            var scrollHeight = this.$refs['message-body'].scrollHeight
+            var height = this.$refs['message-item'].offsetHeight;
+            if (scrollHeight > offsetHeight) {
+              this.$refs['message-body'].scrollTop = height
+            }
+            console.log(this.$refs['message-body'].scrollHeight)
+          })
         })
       },
       getRoomList() {
