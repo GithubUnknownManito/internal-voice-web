@@ -33,15 +33,55 @@
           </div>
         </el-collapse-item>
       </el-collapse>
+      <el-button circle class="config" @click="dialogUserConfigVisible = true">
+        <el-icon>
+          <Tools />
+        </el-icon>
+      </el-button>
     </div>
     <div class="grid-room-content">
-      <div></div>
+      <div class="grid-room-content--title">
+        <span>{{currentRoom && currentRoom.name}}</span>
+      </div>
+      <div class="grid-room-content--message">
+        <div class="message-body">
+          <ul class="grid-room-content--message-body">
+            <template v-for="(msg,index) in currentRoom.msg" :key="index">
+              <li v-if="msg.isMe" class="message-body-bubble bubble-send">
+                <div class="message-body-bubble--avatar">
+                  <el-avatar shape="square" :src="msg.avatar" />
+                </div>
+                <div class="message-body-bubble--msg">
+                  <div class="message-body-bubble--content">
+                    <span class="bubble-text">{{msg.text}}</span>
+                  </div>
+                </div>
+              </li>
+              <li v-else class="message-body-bubble">
+                <div class="message-body-bubble--avatar">
+                  <el-avatar shape="square" :src="msg.avatar" />
+                </div>
+                <div class="message-body-bubble--msg">
+                  <div class="message-body-bubble--name">
+                    <span class="bubble-text">{{msg.userName}}</span>
+                  </div>
+                  <div class="message-body-bubble--content">
+                    <span class="bubble-text">{{msg.text}}</span>
+                  </div>
+                </div>
+              </li>
+            </template>
+          </ul>
+        </div>
+        <div class="message-content">
+          <div class="message-content--input">
+            <el-input type="textarea" v-model="message" resize="none"></el-input>
+          </div>
+          <el-button class="message-content--button" type="primary" @click="handleSend">发送</el-button>
+        </div>
+      </div>
     </div>
-    <el-button circle class="config" @click="dialogUserConfigVisible = true">
-      <el-icon>
-        <Tools />
-      </el-icon>
-    </el-button>
+
     <el-dialog v-model="dialogUserConfigVisible" title="我的昵称设置" width="500px">
       <el-form :model="userInfo" label-width="120px">
         <el-form-item label="你的名称">
@@ -81,6 +121,7 @@
     name: 'App',
     data() {
       return {
+        dialogUserConfigVisible: false,
         userInfo: {
           id: "",
           name: "大笨猫",
@@ -90,7 +131,8 @@
         activeName: "",
         roomList: [],
         userList: [],
-        dialogUserConfigVisible: false,
+        chatSocket: null,
+        message: "",
       }
     },
     watch: {
@@ -112,7 +154,16 @@
 
       }
     },
+    computed: {
+      currentRoom() {
+        return this.roomList.find(room => room.id == this.activeName)
+      },
+    },
     methods: {
+      handleSend() {
+        this.chatSocket.text(this.activeName, this.message, "ROOM")
+        this.message = ""
+      },
       createUser() {
         this.userInfo = JSON.parse(localStorage.getItem("__user"));
         if (!this.userInfo) {
@@ -137,21 +188,46 @@
           this.dialogUserConfigVisible = false
           this.getRoomUser()
         })
-        var chatSocket = ChatRoomSocket({
+        var chatSocket = this.chatSocket = ChatRoomSocket({
           room: this.activeName,
           grid: this.userInfo.id
         })
         chatSocket.addEventListener("message-join", () => {
-          // eslint-disable-next-line no-debugger
-          debugger
-          this.getRoomUser()
-          this.getRoomList()
+          setTimeout(() => {
+            this.getRoomUser()
+          }, 1500)
+        })
+        chatSocket.addEventListener("message-left", () => {
+          setTimeout(() => {
+            this.getRoomUser()
+          }, 1500)
+        })
+        chatSocket.addEventListener("message", (event) => {
+          var {
+            from,
+            model,
+            content
+          } = event.detail
+          var user = this.userList.find(e => e.id == from)
+          if (model == "ROOM") {
+            this.currentRoom.msg.push({
+              avatar: user.avatar,
+              userName: user.name,
+              text: content,
+              isMe: user.id == this.userInfo.id
+            })
+          }
         })
       },
       getRoomList() {
         roomList().then((res) => {
           console.log(res)
-          this.roomList = res.data
+          this.roomList = res.data.map(item => {
+            return {
+              ...item,
+              msg: []
+            }
+          })
           if (!this.activeName) {
             this.activeName = this.roomList[0].id
           }
@@ -213,6 +289,7 @@
     width: 100%;
     height: 100%;
     border-right: 1px solid salmon;
+    position: relative;
   }
 
   .grid-room-content {
@@ -222,6 +299,22 @@
     grid-template-columns: 100%;
     grid-template-rows: 60px calc(100% - 60px);
   }
+
+  .grid-room-content--title {
+    text-align: center;
+    line-height: 60px;
+    border-bottom: 1px solid darkgoldenrod;
+  }
+
+  .grid-room-content--message {
+    width: 100%;
+    height: 100%;
+  }
+
+  .grid-room-content--message-body {
+    width: 100%;
+  }
+
 
   .el-collapse-item:deep() .el-collapse-item__header {
     padding-left: 20px;
@@ -252,5 +345,99 @@
     bottom: 40px;
     width: 40px;
     height: 40px;
+  }
+
+  .message-body-bubble {
+    display: inline-flex;
+    width: 100%;
+    flex-direction: row;
+    gap: 8px;
+    padding: 12px 9px;
+  }
+
+  .message-body-bubble--msg {
+    flex: 100%;
+    width: 100%;
+    display: inline-grid;
+  }
+
+  .message-body-bubble--content {
+    position: relative;
+    padding: 10px 8px;
+    width: 32%;
+    word-break: break-all;
+  }
+
+  .message-body-bubble--content span {
+    position: relative;
+    z-index: 1;
+  }
+
+  .message-body-bubble--content:before {
+    content: "";
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    top: 6px;
+    left: -4px;
+    background: #9f9f9fd1;
+    transform: rotate(45deg);
+  }
+
+  .message-body-bubble--content:after {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: #9f9f9fd1;
+    top: 0px;
+    left: 0px;
+    z-index: 0;
+    border-radius: 7px;
+  }
+
+  .bubble-send {
+    flex-direction: row-reverse;
+  }
+
+  .bubble-send .message-body-bubble--name {
+    text-align: end;
+  }
+
+  .bubble-send .message-body-bubble--msg {
+    justify-items: end;
+  }
+
+  .bubble-send .message-body-bubble--content:before {
+    left: unset;
+    right: -4px;
+  }
+
+  .message-body {
+    overflow-y: auto;
+    height: calc(100% - 80px);
+    width: 100%;
+  }
+
+  .message-content {
+    width: 100%;
+    padding: 8px 9px;
+    height: 80px;
+    display: inline-flex;
+  }
+
+  .message-content--input {
+    height: 100%;
+    width: 100%
+  }
+
+  .message-content--button {
+    width: 80px;
+    height: 100%;
+  }
+
+  .message-content--input .el-textarea,
+  .el-textarea:deep() .el-textarea__inner {
+    height: 100%;
   }
 </style>
