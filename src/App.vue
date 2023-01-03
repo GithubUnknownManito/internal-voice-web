@@ -44,8 +44,8 @@
         <span>{{currentRoom && currentRoom.name}}</span>
       </div>
       <div class="grid-room-content--message">
-        <div class="message-body">
-          <ul class="grid-room-content--message-body">
+        <div ref="message-body" class="message-body">
+          <ul ref="message-item" class="grid-room-content--message-body">
             <template v-for="(msg,index) in currentRoom.msg" :key="index">
               <li v-if="msg.isMe" class="message-body-bubble bubble-send">
                 <div class="message-body-bubble--avatar">
@@ -53,7 +53,7 @@
                 </div>
                 <div class="message-body-bubble--msg">
                   <div class="message-body-bubble--content">
-                    <span class="bubble-text">{{msg.text}}</span>
+                    <span class="bubble-text" v-html="msg.text"></span>
                   </div>
                 </div>
               </li>
@@ -66,7 +66,7 @@
                     <span class="bubble-text">{{msg.userName}}</span>
                   </div>
                   <div class="message-body-bubble--content">
-                    <span class="bubble-text">{{msg.text}}</span>
+                    <span class="bubble-text" v-html="msg.text"></span>
                   </div>
                 </div>
               </li>
@@ -75,7 +75,7 @@
         </div>
         <div class="message-content">
           <div class="message-content--input">
-            <el-input type="textarea" v-model="message" resize="none"></el-input>
+            <el-input type="textarea" v-model="message" resize="none" v-on:keydown.enter="handleMessageKeyDown"></el-input>
           </div>
           <el-button class="message-content--button" type="primary" @click="handleSend">发送</el-button>
         </div>
@@ -213,10 +213,18 @@
             this.currentRoom.msg.push({
               avatar: user.avatar,
               userName: user.name,
-              text: content,
+              text: content.replace(/</g, "&gt;").replace(/>/g, "&lt;").replace(/\n/g, "<br/>"),
               isMe: user.id == this.userInfo.id
             })
           }
+          this.$nextTick(() => {
+            var offsetHeight = this.$refs['message-body'].offsetHeight;
+            var scrollHeight = this.$refs['message-body'].scrollHeight
+            var height = this.$refs['message-item'].offsetHeight;
+            if (scrollHeight > offsetHeight) {
+              this.$refs['message-body'].scrollTop = height
+            }
+          })
         })
       },
       getRoomList() {
@@ -257,6 +265,16 @@
           return false
         }
         return true
+      },
+      handleMessageKeyDown(e) {
+        if (e.ctrlKey && e.keyCode == 13) {
+          this.message += '\n';
+        } else {
+          this.handleSend()
+          if (e != undefined) {
+            e.preventDefault();
+          }
+        }
       },
       devastate() {
         devastate(this.userInfo).then(res => {

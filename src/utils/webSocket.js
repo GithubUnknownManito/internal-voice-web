@@ -6,15 +6,35 @@ class ChatRoomSocketFunction extends EventTarget {
   baseUrl = process.env.VUE_APP_BASE_Socket;
   option = null;
   webSocket = null;
+  onlineStatus = 0;
+  isError = true;
   statusType = 0;
   voiceStatus = 0;
   voiceObj = null;
   constructor(option) {
     super();
     this.option = option;
+    this.createSocket();
+    window.addEventListener("beforeunload", this.beforeunload);
+  }
+
+  createSocket() {
+    if (this.webSocket) {
+      try {
+        this.webSocket.close();
+      } catch (error) {
+        console.log(error);
+      }
+    }
+    this.onlineStatus = 0;
     this.webSocket = new WebSocket(this.url);
     this.webSocket.addEventListener("open", () => {
       this.heartBeat();
+      if (this.onlineStatus == 2) {
+        ElMessage.success("重连成功");
+      }
+      this.onlineStatus = 1;
+      this.isError = false;
     });
     this.webSocket.addEventListener("message", (event) => {
       const { status, data } = JSON.parse(event.data);
@@ -89,12 +109,24 @@ class ChatRoomSocketFunction extends EventTarget {
     });
     this.webSocket.addEventListener("error", (event) => {
       console.error("error", event);
+      if (this.isError) {
+        return;
+      }
+      if (this.onlineStatus == 0) {
+        ElMessage.error("重连失败，请刷新页面");
+      } else {
+        ElMessage.error("发生异常，正在尝试重连");
+      }
+      if (this.onlineStatus == 1) {
+        this.createSocket();
+      }
+      this.onlineStatus = 2;
+      this.isError = true;
     });
     this.webSocket.addEventListener("close", () => {
+      this.onlineStatus = -1;
       this.close();
     });
-
-    window.addEventListener("beforeunload", this.beforeunload);
   }
 
   get url() {
